@@ -12,7 +12,8 @@ export default function AuthCard() {
     try {
       await authClient.signIn.social({
         provider,
-        callbackURL: "/",
+        callbackURL: "/dashboard",
+        newUserCallbackURL: "/onboarding",
       });
     } catch (error) {
       toast.error("Something went wrong");
