@@ -49,7 +49,7 @@ export default function AppSidebar() {
     <Sidebar variant="inset" collapsible="icon">
       <SidebarContent>
         {/* Logo - altid synligt */}
-        <SidebarGroup className="mt-4 mb-8">
+        <SidebarGroup className="mt-4">
           <SidebarGroupContent>
             <SalonSwitcher />
           </SidebarGroupContent>
