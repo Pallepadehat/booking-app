@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import { Building2, Check, ChevronsUpDown, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -33,16 +33,11 @@ import {
 } from "@/components/ui/sidebar";
 import { api } from "@/convex/_generated/api";
 
+import { useSalon } from "../providers/salon-provider";
+
 export function SalonSwitcher() {
   const { isMobile } = useSidebar();
-  const salons = useQuery(api.salons.getMySalons);
-
-  // For now, simpler state. In a real app with context, we'd use a context or URL param.
-  // We'll default to the first salon if available.
-  const [activeSalon, setActiveSalon] =
-    React.useState<
-      typeof salons extends (infer T)[] | undefined ? T : never | null
-    >(null);
+  const { salons, activeSalon, setActiveSalon, isLoading } = useSalon();
 
   const createSalon = useMutation(api.salons.createSalon);
   const [open, setOpen] = React.useState(false);
@@ -51,12 +46,6 @@ export function SalonSwitcher() {
     address: "",
     city: "",
   });
-
-  React.useEffect(() => {
-    if (salons && salons.length > 0 && !activeSalon) {
-      setActiveSalon(salons[0] as any);
-    }
-  }, [salons, activeSalon]);
 
   const handleCreateSalon = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,14 +60,14 @@ export function SalonSwitcher() {
       console.log("Created salon:", salonId);
       setOpen(false);
       setNewSalonData({ name: "", address: "", city: "" });
-      // The useQuery will update and we can switch to it if we want custom logic,
-      // but simpler for now just to have it in the list.
+      // Context provider's query will update, and we might want to switch to it manually
+      // but simpler for now. useSalon handles fetching.
     } catch (error) {
       console.error("Failed to create salon:", error);
     }
   };
 
-  if (!salons) {
+  if (isLoading || !salons) {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
