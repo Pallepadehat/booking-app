@@ -1,13 +1,14 @@
 "use client";
 
+import { FaApple, FaGithub, FaGoogle } from "react-icons/fa";
+import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
-import { toast } from "sonner";
-import { FaApple, FaGithub, FaGoogle } from "react-icons/fa";
 
 export default function AuthCard() {
   const handleSignIn = async (
-    provider: Parameters<typeof authClient.signIn.social>[0]["provider"],
+    provider: Parameters<typeof authClient.signIn.social>[0]["provider"]
   ) => {
     try {
       await authClient.signIn.social({
@@ -21,7 +22,7 @@ export default function AuthCard() {
     }
   };
   return (
-    <div className="flex items-center justify-center max-w-sm flex-col gap-y-5 w-full">
+    <div className="flex w-full max-w-sm flex-col items-center justify-center gap-y-5">
       <Button
         variant="secondary"
         onClick={() => handleSignIn("github")}
