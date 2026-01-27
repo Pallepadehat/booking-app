@@ -55,7 +55,7 @@ export default function AppSidebar() {
                 <SidebarMenuButton asChild>
                   <Link href="/dashboard" className="w-full">
                     <Scissors className="h-5 w-5" />
-                    <span>Cut&apos;n Go</span>
+                    <span>KlipSync</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
