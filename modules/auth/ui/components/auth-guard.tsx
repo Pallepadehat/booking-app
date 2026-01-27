@@ -1,14 +1,16 @@
 "use client";
 
-import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
-import SignInView from "../views/signin-view";
+import { AuthLoading, Authenticated, Unauthenticated } from "convex/react";
+
 import { Spinner } from "@/components/ui/spinner";
+
+import SignInView from "../views/signin-view";
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   return (
     <>
       <AuthLoading>
-        <div className="flex items-center justify-center min-h-svh gap-2">
+        <div className="flex min-h-svh items-center justify-center gap-2">
           <Spinner />
           <h1 className="text-md font-light italic">
             We are loading your data...
