@@ -18,7 +18,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         </div>
       </AuthLoading>
       <Unauthenticated>
-        <SignInView />
+        <div className="flex h-svh w-full items-center justify-center">
+          <SignInView />
+        </div>
       </Unauthenticated>
       <Authenticated>{children}</Authenticated>
     </>

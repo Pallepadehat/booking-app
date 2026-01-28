@@ -53,3 +53,13 @@ export const createSalon = mutation({
     return salon;
   },
 });
+
+export const getServices = query({
+  args: { salonId: v.id("salons") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("services")
+      .withIndex("by_salon", (q) => q.eq("salonId", args.salonId))
+      .collect();
+  },
+});
