@@ -46,10 +46,53 @@ export const createAppointment = mutation({
 
     const endsAt = args.startsAt + service.durationMinutes * 60 * 1000;
 
+    // Check for existing customer
+    let customerId: string | undefined;
+    let customer = await ctx.db
+      .query("customers")
+      .withIndex("by_salon_and_phone", (q) =>
+        q.eq("salonId", args.salonId).eq("phone", args.customerPhone)
+      )
+      .first();
+
+    // If not found by phone, try email if provided
+    if (!customer && args.customerEmail) {
+      customer = await ctx.db
+        .query("customers")
+        .withIndex("by_salon_and_email", (q) =>
+          q.eq("salonId", args.salonId).eq("email", args.customerEmail)
+        )
+        .first();
+    }
+
+    const now = Date.now();
+
+    if (customer) {
+      customerId = customer._id;
+      // Update lastSeenAt
+      await ctx.db.patch(customer._id, {
+        lastSeenAt: now,
+        // Update name if changed? Maybe keep original? Let's just update lastSeenAt for now.
+        // Actually, updating name/email might be good if they changed,
+        // but let's stick to simple logic: "register creates/links".
+      });
+    } else {
+      // Create new customer
+      customerId = await ctx.db.insert("customers", {
+        salonId: args.salonId,
+        name: args.customerName,
+        phone: args.customerPhone,
+        email: args.customerEmail,
+        firstSeenAt: now,
+        lastSeenAt: now,
+      });
+    }
+
     const appointmentId = await ctx.db.insert("appointments", {
       salonId: args.salonId,
       hairdresserId: args.hairdresserId,
       serviceId: args.serviceId,
+      customerId: customerId as any, // Cast to any to avoid type check until schema regen picks it up
       customerName: args.customerName,
       customerPhone: args.customerPhone,
       customerEmail: args.customerEmail,

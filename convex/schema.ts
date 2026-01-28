@@ -75,15 +75,31 @@ export default defineSchema({
     createdBy: v.string(),
   }).index("by_code", ["code"]),
 
+  customers: defineTable({
+    salonId: v.id("salons"),
+    name: v.string(),
+    phone: v.string(),
+    email: v.optional(v.string()),
+    firstSeenAt: v.number(),
+    lastSeenAt: v.number(),
+  })
+    .index("by_salon", ["salonId"])
+    .index("by_salon_and_phone", ["salonId", "phone"])
+    .index("by_salon_and_email", ["salonId", "email"]),
+
   // Bookinger
   appointments: defineTable({
     salonId: v.id("salons"),
     hairdresserId: v.id("hairdressers"),
     serviceId: v.id("services"),
-    // kunde-info: enten guest eller user
+
+    // Linked customer (new way)
+    customerId: v.optional(v.id("customers")),
+
+    // Snapshotted customer info (legacy/robustness)
     customerName: v.string(),
     customerPhone: v.string(),
-    customerEmail: v.optional(v.string()),
+    customerEmail: v.optional(v.string()), // email is optional
 
     // timestamps som ms siden epoch
     startsAt: v.number(),
@@ -102,5 +118,7 @@ export default defineSchema({
   })
     .index("by_salon_and_start", ["salonId", "startsAt"])
     .index("by_hairdresser_and_start", ["hairdresserId", "startsAt"])
+    // Add index to find appointments by customer if needed, but not strictly required by task yet
+    .index("by_customer", ["customerId"])
     .index("by_booking_code", ["bookingCode"]),
 });
