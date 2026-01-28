@@ -38,19 +38,19 @@ export default function DashboardPage() {
 
   const monthChartConfig = {
     earnings: {
-      label: "Earnings (DKK)",
-      color: "hsl(var(--chart-1))",
+      label: "Omsætning (DKK)",
+      color: "hsl(160 80% 50%)", // Emerald-like for earnings
     },
     cuts: {
-      label: "Cuts",
-      color: "hsl(var(--chart-2))",
+      label: "Behandlinger",
+      color: "hsl(220 80% 50%)", // Blue-like for cuts
     },
   } satisfies ChartConfig;
 
   const radarChartConfig = {
     bookings: {
-      label: "Bookings",
-      color: "hsl(var(--chart-1))",
+      label: "Bookinger",
+      color: "hsl(280 80% 50%)", // Purple-like for bookings
     },
   } satisfies ChartConfig;
 
@@ -58,9 +58,9 @@ export default function DashboardPage() {
     if (!activeSalon) return;
     try {
       await seedData({ salonId: activeSalon._id });
-      toast.success("Demo data populated!");
+      toast.success("Demodata indlæst!");
     } catch (error) {
-      toast.error("Failed to seed data");
+      toast.error("Kunne ikke indlæse data");
     }
   };
 
@@ -68,7 +68,7 @@ export default function DashboardPage() {
     return (
       <div className="flex h-full items-center justify-center p-8">
         <p className="text-muted-foreground">
-          Select a salon to view the dashboard.
+          Vælg en salon for at se oversigten.
         </p>
       </div>
     );
@@ -85,17 +85,19 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:p-8">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+        <h2 className="text-3xl font-bold tracking-tight">Oversigt</h2>
         <Button onClick={handleSeed} variant="outline" size="sm">
           <Database className="mr-2 h-4 w-4" />
-          Populate Demo Data
+          Indlæs Demo Data
         </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Samlet Omsætning
+            </CardTitle>
             <Coins className="text-muted-foreground h-4 w-4" />
           </CardHeader>
           <CardContent>
@@ -106,33 +108,35 @@ export default function DashboardPage() {
               })}
             </div>
             <p className="text-muted-foreground text-xs">
-              Total earnings from completed services
+              Total indtjening fra gennemførte behandlinger
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Today's Bookings
+              Dagens Bookinger
             </CardTitle>
             <CalendarCheck className="text-muted-foreground h-4 w-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.todayBookings}</div>
             <p className="text-muted-foreground text-xs">
-              Appointments scheduled for today
+              Aftaler planlagt i dag
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Cuts</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Behandlinger i alt
+            </CardTitle>
             <Scissors className="text-muted-foreground h-4 w-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalCuts}</div>
             <p className="text-muted-foreground text-xs">
-              Completed services all time
+              Gennemførte behandlinger totalt
             </p>
           </CardContent>
         </Card>
@@ -141,7 +145,7 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-7">
         <Card className="col-span-4">
           <CardHeader>
-            <CardTitle>Monthly Overview</CardTitle>
+            <CardTitle>Månedligt Overblik</CardTitle>
           </CardHeader>
           <CardContent className="pl-2">
             <ChartContainer
@@ -175,13 +179,18 @@ export default function DashboardPage() {
                     />
                   </linearGradient>
                 </defs>
-                <CartesianGrid vertical={false} />
+                <CartesianGrid
+                  vertical={false}
+                  strokeDasharray="3 3"
+                  className="stroke-muted"
+                />
                 <XAxis
                   dataKey="month"
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
                   tickFormatter={(value) => value.slice(0, 3)}
+                  className="text-muted-foreground font-medium"
                 />
                 <YAxis
                   yAxisId="right"
@@ -189,12 +198,15 @@ export default function DashboardPage() {
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
+                  className="text-muted-foreground font-medium"
                 />
                 <YAxis
                   yAxisId="left"
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
+                  className="text-muted-foreground font-medium"
+                  tickFormatter={(value) => `${value / 1000}k`}
                 />
                 <ChartTooltip
                   cursor={false}
@@ -203,19 +215,21 @@ export default function DashboardPage() {
                 <Area
                   yAxisId="left"
                   dataKey="earnings"
-                  type="natural"
+                  type="monotone"
                   fill="url(#fillEarnings)"
                   fillOpacity={0.4}
                   stroke="var(--color-earnings)"
+                  strokeWidth={2}
                   stackId="a"
                 />
                 <Area
                   yAxisId="right"
                   dataKey="cuts"
-                  type="natural"
+                  type="monotone"
                   fill="url(#fillCuts)"
                   fillOpacity={0.4}
                   stroke="var(--color-cuts)"
+                  strokeWidth={2}
                   stackId="b"
                 />
               </AreaChart>
@@ -225,7 +239,7 @@ export default function DashboardPage() {
 
         <Card className="col-span-3">
           <CardHeader>
-            <CardTitle>Hairdresser Performance</CardTitle>
+            <CardTitle>Frisør Performance</CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer
@@ -237,12 +251,17 @@ export default function DashboardPage() {
                   cursor={false}
                   content={<ChartTooltipContent />}
                 />
-                <PolarAngleAxis dataKey="hairdresser" />
-                <PolarGrid />
+                <PolarAngleAxis
+                  dataKey="hairdresser"
+                  className="text-muted-foreground font-medium"
+                />
+                <PolarGrid className="stroke-muted" />
                 <Radar
                   dataKey="bookings"
                   fill="var(--color-bookings)"
-                  fillOpacity={0.6}
+                  fillOpacity={0.5}
+                  stroke="var(--color-bookings)"
+                  strokeWidth={2}
                   dot={{
                     r: 4,
                     fillOpacity: 1,
