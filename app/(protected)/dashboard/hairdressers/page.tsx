@@ -88,7 +88,7 @@ export default function HairdressersPage() {
 
   // Conditionally fetch if we have an active salon
   const hairdressers = useQuery(
-    api.hairdressers.getBySalonId,
+    api.hairdressers.getHairdressers,
     activeSalon ? { salonId: activeSalon._id } : "skip"
   );
 

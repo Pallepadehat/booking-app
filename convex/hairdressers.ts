@@ -2,7 +2,7 @@ import { v } from "convex/values";
 
 import { mutation, query } from "./_generated/server";
 
-export const getBySalonId = query({
+export const getHairdressers = query({
   args: { salonId: v.id("salons") },
   handler: async (ctx, args) => {
     const hairdressers = await ctx.db
