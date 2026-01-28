@@ -102,7 +102,10 @@ export function TimelineView({
 
       {/* Body - Time slots */}
       <div className="relative flex-1 overflow-y-auto">
-        <div className="flex h-150 min-h-full">
+        <div
+          className="flex min-h-full"
+          style={{ height: `${hours.length * 60}px` }}
+        >
           {/* Time labels sidebar */}
           <div className="bg-muted/20 w-16 shrink-0 border-r">
             {hours.map((hour) => (
