@@ -5,7 +5,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import { Doc, Id } from "@/convex/_generated/dataModel";
 
 type Salon = {
   _id: Id<"salons">;
@@ -15,6 +15,7 @@ type Salon = {
   city: string;
   ownerId: string;
   role: "owner" | "manager" | "stylist";
+  openingHours?: Doc<"salons">["openingHours"];
 };
 
 type SalonContextType = {

@@ -16,6 +16,8 @@ import type * as invites from "../invites.js";
 import type * as onboarding from "../onboarding.js";
 import type * as public_ from "../public.js";
 import type * as salons from "../salons.js";
+import type * as services from "../services.js";
+import type * as settings from "../settings.js";
 
 import type {
   ApiFromModules,
@@ -32,6 +34,8 @@ declare const fullApi: ApiFromModules<{
   onboarding: typeof onboarding;
   public: typeof public_;
   salons: typeof salons;
+  services: typeof services;
+  settings: typeof settings;
 }>;
 
 /**

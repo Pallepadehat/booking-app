@@ -154,6 +154,7 @@ export default function CalendarPage() {
           appointments={appointments || []}
           onSlotClick={handleSlotClick}
           onAppointmentClick={handleAppointmentClick}
+          salonOpeningHours={activeSalon?.openingHours}
         />
       </div>
 

@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-import { Id } from "@/convex/_generated/dataModel";
+import { Doc, Id } from "@/convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
 
 interface Appointment {
@@ -25,6 +25,7 @@ interface TimelineViewProps {
   appointments: Appointment[];
   onSlotClick: (hairdresserId: Id<"hairdressers">, time: Date) => void;
   onAppointmentClick: (appointment: Appointment) => void;
+  salonOpeningHours?: Doc<"salons">["openingHours"];
 }
 
 export function TimelineView({
@@ -33,16 +34,39 @@ export function TimelineView({
   appointments,
   onSlotClick,
   onAppointmentClick,
+  salonOpeningHours,
 }: TimelineViewProps) {
-  // Hours to display: 8:00 to 18:00
-  const startHour = 8;
-  const endHour = 18;
+  const { startHour, endHour } = useMemo(() => {
+    if (!salonOpeningHours) return { startHour: 8, endHour: 18 };
+
+    const days = [
+      "sunday",
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+    ];
+    const dayName = days[date.getDay()] as keyof typeof salonOpeningHours;
+    // @ts-ignore
+    const dayConfig = salonOpeningHours[dayName];
+
+    if (!dayConfig || !dayConfig.isOpen) return { startHour: 8, endHour: 18 };
+
+    const start = parseInt(dayConfig.start.split(":")[0]) || 8;
+    const end =
+      Math.ceil(
+        parseInt(dayConfig.end.split(":")[0]) +
+          (dayConfig.end.includes(":30") ? 0.5 : 0)
+      ) || 18;
+
+    return { startHour: start, endHour: end };
+  }, [date, salonOpeningHours]);
+
   const hours = useMemo(() => {
-    return Array.from(
-      { length: endHour - startHour + 1 },
-      (_, i) => startHour + i
-    );
-  }, []);
+    return Array.from({ length: endHour - startHour }, (_, i) => startHour + i);
+  }, [startHour, endHour]);
 
   const getPositionStyle = (start: number, end: number) => {
     const dayStart = new Date(date);
@@ -61,7 +85,7 @@ export function TimelineView({
     <div className="bg-background flex h-full flex-col overflow-hidden rounded-md border">
       {/* Header - Hairdressers */}
       <div className="flex border-b">
-        <div className="bg-muted/50 text-muted-foreground w-16 flex-shrink-0 border-r p-2 text-center text-xs">
+        <div className="bg-muted/50 text-muted-foreground w-16 shrink-0 border-r p-2 text-center text-xs">
           Tid
         </div>
         <div className="flex flex-1">
@@ -78,13 +102,16 @@ export function TimelineView({
 
       {/* Body - Time slots */}
       <div className="relative flex-1 overflow-y-auto">
-        <div className="flex h-[600px] min-h-full">
+        <div
+          className="flex min-h-full"
+          style={{ height: `${hours.length * 60}px` }}
+        >
           {/* Time labels sidebar */}
-          <div className="bg-muted/20 w-16 flex-shrink-0 border-r">
+          <div className="bg-muted/20 w-16 shrink-0 border-r">
             {hours.map((hour) => (
               <div
                 key={hour}
-                className="text-muted-foreground relative h-[60px] border-b pt-1 pr-2 text-right text-xs"
+                className="text-muted-foreground relative h-15 border-b pt-1 pr-2 text-right text-xs"
               >
                 {hour}:00
               </div>
@@ -96,7 +123,7 @@ export function TimelineView({
             {/* Grid lines */}
             <div className="pointer-events-none absolute inset-0 flex flex-col">
               {hours.map((hour) => (
-                <div key={hour} className="h-[60px] border-b border-dashed" />
+                <div key={hour} className="h-15 border-b border-dashed" />
               ))}
             </div>
 
@@ -107,9 +134,9 @@ export function TimelineView({
               >
                 {/* Clickable slots (every 30 mins) */}
                 {hours.map((hour) => (
-                  <div key={hour} className="h-[60px]">
+                  <div key={hour} className="h-15">
                     <div
-                      className="hover:bg-muted/50 h-[30px] cursor-pointer transition-colors"
+                      className="hover:bg-muted/50 h-7.5 cursor-pointer transition-colors"
                       onClick={() => {
                         const slotTime = new Date(date);
                         slotTime.setHours(hour, 0, 0, 0);
@@ -117,7 +144,7 @@ export function TimelineView({
                       }}
                     />
                     <div
-                      className="hover:bg-muted/50 h-[30px] cursor-pointer transition-colors"
+                      className="hover:bg-muted/50 h-7.5 cursor-pointer transition-colors"
                       onClick={() => {
                         const slotTime = new Date(date);
                         slotTime.setHours(hour, 30, 0, 0);
