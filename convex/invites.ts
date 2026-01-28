@@ -2,79 +2,78 @@ import { v } from "convex/values";
 
 import { mutation } from "./_generated/server";
 
-// Generate invite code: "CUTN4K9P"
-export const generateInviteCode = mutation({
+export const createInvite = mutation({
   args: {
     salonId: v.id("salons"),
-    role: v.union(v.literal("stylist"), v.literal("manager")),
+    role: v.union(v.literal("manager"), v.literal("stylist")),
   },
-  handler: async (ctx, { salonId, role }) => {
+  handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (identity === null) {
-      throw new Error("Not authenticated");
+    if (!identity) throw new Error("Unauthorized");
+
+    // Check if user is owner or manager of the salon
+    const membership = await ctx.db
+      .query("memberships")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .filter((q) => q.eq(q.field("salonId"), args.salonId))
+      .first();
+
+    if (
+      !membership ||
+      (membership.role !== "owner" && membership.role !== "manager")
+    ) {
+      throw new Error("No permission to create invites");
     }
 
-    let code: string;
-    do {
-      code =
-        Math.random().toString(36).substr(2, 4).toUpperCase() +
-        Math.random().toString(36).substr(2, 4).toUpperCase();
-    } while (
-      await ctx.db
-        .query("inviteCodes")
-        .withIndex("by_code", (q) => q.eq("code", code))
-        .first()
-    );
+    // Generate a simple 8-char code
+    const code = Math.random().toString(36).substring(2, 10).toUpperCase();
 
-    return await ctx.db.insert("inviteCodes", {
-      salonId,
+    await ctx.db.insert("inviteCodes", {
+      salonId: args.salonId,
       code,
-      role,
-      usedBy: undefined,
-      expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 dage
+      role: args.role,
+      expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days
       createdBy: identity.subject,
     });
+
+    return code;
   },
 });
 
-// Redeem invite code
-export const joinSalonWithCode = mutation({
+export const joinSalon = mutation({
   args: { code: v.string() },
-  handler: async (ctx, { code }) => {
+  handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (identity === null) {
-      throw new Error("Not authenticated");
-    }
+    if (!identity) throw new Error("Unauthorized");
 
     const invite = await ctx.db
       .query("inviteCodes")
-      .withIndex("by_code", (q) => q.eq("code", code))
-      .filter((q) => q.gt(q.field("expiresAt"), Date.now()))
+      .withIndex("by_code", (q) => q.eq("code", args.code))
       .first();
 
-    if (!invite || invite.usedBy) throw new Error("Ugyldig eller brugt kode");
+    if (!invite) throw new Error("Invalid code");
+    if (invite.usedBy) throw new Error("Code already used");
+    if (invite.expiresAt < Date.now()) throw new Error("Code expired");
 
-    const salonId = invite.salonId;
+    // Check if already a member
+    const existingcheck = await ctx.db
+      .query("memberships")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .filter((q) => q.eq(q.field("salonId"), invite.salonId))
+      .first();
 
-    // Opret hairdresser record
-    const hairdresserId = await ctx.db.insert("hairdressers", {
-      salonId,
-      userId: identity.subject,
-      inviteCode: code,
-      name: identity.name || "Frisør",
-      active: true,
-    });
+    if (existingcheck) throw new Error("Already a member of this salon");
 
-    // Markér som brugt
-    await ctx.db.patch(invite._id, { usedBy: identity.subject });
-
-    // Opret membership
     await ctx.db.insert("memberships", {
       userId: identity.subject,
-      salonId,
-      role: invite.role as any,
+      salonId: invite.salonId,
+      role: invite.role,
     });
 
-    return { salonId, hairdresserId };
+    await ctx.db.patch(invite._id, {
+      usedBy: identity.subject,
+    });
+
+    return invite.salonId;
   },
 });

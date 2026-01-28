@@ -4,357 +4,245 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { useMutation } from "convex/react";
-import { Check, ChevronLeft, ChevronRight, ChevronsUpDown } from "lucide-react";
+import { ArrowRight, Store, Users } from "lucide-react";
+import { toast } from "sonner";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { api } from "@/convex/_generated/api";
-import { authClient } from "@/lib/auth-client";
-import { cn } from "@/lib/utils";
-
-interface Step {
-  title: string;
-  description: string;
-  content: React.ReactNode;
-}
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { data: session } = authClient.useSession();
-  const createSalon = useMutation(api.onboarding.createFirstSalon);
-  const createHairdresser = useMutation(api.onboarding.createFirstHairdresser);
+  const createSalon = useMutation(api.salons.createSalon);
+  const joinSalon = useMutation(api.invites.joinSalon);
+  const createFirstHairdresser = useMutation(
+    api.onboarding.createFirstHairdresser
+  );
 
-  const [currentStep, setCurrentStep] = useState(0);
-  const [salonData, setSalonData] = useState({
+  const [mode, setMode] = useState<"initial" | "create" | "join">("initial");
+  const [formData, setFormData] = useState({
     name: "",
     address: "",
     city: "",
   });
-  const [createdSalonId, setCreatedSalonId] = useState<string | null>(null);
-  const [hairdresserData, setHairdresserData] = useState({
-    name: "",
-    services: [] as string[],
-  });
+  const [joinCode, setJoinCode] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const steps: Step[] = [
-    {
-      title: "Opret din salon",
-      description: "Indtast oplysninger om din salon",
-      content: (
-        <div className="space-y-6">
-          <div className="grid gap-2">
-            <Label htmlFor="salonName">Navn</Label>
-            <Input
-              id="salonName"
-              placeholder="F.eks. City Klip"
-              value={salonData.name}
-              onChange={(e) =>
-                setSalonData({ ...salonData, name: e.target.value })
-              }
-              className="h-11"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="address">Adresse</Label>
-            <Input
-              id="address"
-              placeholder="Gadename 123"
-              value={salonData.address}
-              onChange={(e) =>
-                setSalonData({ ...salonData, address: e.target.value })
-              }
-              className="h-11"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="city">By</Label>
-            <Input
-              id="city"
-              placeholder="Postnr. og by"
-              value={salonData.city}
-              onChange={(e) =>
-                setSalonData({ ...salonData, city: e.target.value })
-              }
-              className="h-11"
-            />
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: "Opret frisør",
-      description: "Tilføj den første profil til salonen",
-      content: (
-        <div className="space-y-6">
-          <div className="flex items-center gap-4">
-            <Avatar className="bg-muted h-16 w-16 border">
-              <AvatarFallback className="bg-transparent text-lg">
-                {hairdresserData.name.substring(0, 2).toUpperCase() || "?"}
-              </AvatarFallback>
-            </Avatar>
-            <div className="grid flex-1 gap-2">
-              <Label htmlFor="hairdresserName">Navn</Label>
-              <Input
-                id="hairdresserName"
-                placeholder="Dit navn"
-                value={hairdresserData.name}
-                onChange={(e) =>
-                  setHairdresserData({
-                    ...hairdresserData,
-                    name: e.target.value,
-                  })
-                }
-                className="h-11"
-              />
-            </div>
-          </div>
-          <div className="grid gap-2">
-            <Label>Kompetencer</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  className="h-11 w-full justify-between"
-                >
-                  {hairdresserData.services.length > 0
-                    ? `${hairdresserData.services.length} valgt`
-                    : "Vælg services..."}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                <Command>
-                  <CommandInput placeholder="Søg service..." />
-                  <CommandList>
-                    <CommandEmpty>Ingen service fundet.</CommandEmpty>
-                    <CommandGroup>
-                      {["klip", "farvning", "hætte", "permanent", "bryn"].map(
-                        (service) => (
-                          <CommandItem
-                            key={service}
-                            value={service}
-                            onSelect={(currentValue) => {
-                              const services =
-                                hairdresserData.services.includes(currentValue)
-                                  ? hairdresserData.services.filter(
-                                      (item) => item !== currentValue
-                                    )
-                                  : [...hairdresserData.services, currentValue];
-                              setHairdresserData({
-                                ...hairdresserData,
-                                services,
-                              });
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                hairdresserData.services.includes(service)
-                                  ? "opacity-100"
-                                  : "opacity-0"
-                              )}
-                            />
-                            {service.charAt(0).toUpperCase() + service.slice(1)}
-                          </CommandItem>
-                        )
-                      )}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+  const handleCreateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
 
-            <div className="mt-2 flex min-h-8 flex-wrap gap-2">
-              {hairdresserData.services.map((service) => (
-                <Badge
-                  key={service}
-                  variant="secondary"
-                  className="px-2 py-1 text-sm"
-                >
-                  {service}
-                  <button
-                    className="ring-offset-background focus:ring-ring ml-2 rounded-full outline-none focus:ring-2 focus:ring-offset-2"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        setHairdresserData({
-                          ...hairdresserData,
-                          services: hairdresserData.services.filter(
-                            (s) => s !== service
-                          ),
-                        });
-                      }
-                    }}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                    onClick={() => {
-                      setHairdresserData({
-                        ...hairdresserData,
-                        services: hairdresserData.services.filter(
-                          (s) => s !== service
-                        ),
-                      });
-                    }}
-                  >
-                    <span className="sr-only">Fjern</span>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="hover:text-destructive h-3 w-3"
-                    >
-                      <path d="M18 6 6 18" />
-                      <path d="m6 6 12 12" />
-                    </svg>
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: "Alt er klar",
-      description: "Vi har oprettet din salon og profil",
-      content: (
-        <div className="space-y-4 py-8 text-center">
-          <div className="bg-primary/10 text-primary mb-2 inline-flex h-16 w-16 items-center justify-center rounded-full">
-            <Check className="h-8 w-8" />
-          </div>
-          <h3 className="text-xl font-semibold tracking-tight">
-            Velkommen ombord
-          </h3>
-          <p className="text-muted-foreground mx-auto max-w-70 text-sm">
-            {salonData.name} og {hairdresserData.name} er nu klar til at modtage
-            bookinger.
-          </p>
-          <Button
-            size="lg"
-            onClick={() => router.push("/dashboard")}
-            className="mt-4 w-full"
-          >
-            Gå til Dashboard
-          </Button>
-        </div>
-      ),
-    },
-  ];
-
-  const handleNext = async () => {
-    if (currentStep === 0 && session) {
-      // Step 1: Opret salon
-      const salonId = await createSalon({
-        name: salonData.name,
-        address: salonData.address,
-        city: salonData.city,
+    try {
+      const salonId = await createSalon(formData);
+      // Create a default hairdresser profile for the owner
+      await createFirstHairdresser({
+        salonId: salonId,
+        name: "Min første frisør", // Default name, user can change later
+        services: [],
       });
-      setCreatedSalonId(salonId);
-    } else if (currentStep === 1) {
-      // Step 2: Opret frisør
-      if (!createdSalonId) return;
-
-      await createHairdresser({
-        salonId: createdSalonId as any,
-        name: hairdresserData.name,
-        services: hairdresserData.services,
-      });
-    }
-
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
+      toast.success("Salon oprettet!");
+      router.push("/dashboard");
+    } catch (error) {
+      toast.error("Der skete en fejl. Prøv igen.");
+      console.error(error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  return (
-    <div className="bg-muted/40 dark:bg-background flex min-h-screen items-center justify-center p-4">
-      <Card className="bg-card w-full max-w-lg border-0 shadow-lg sm:border sm:shadow-sm">
-        <CardHeader className="space-y-1 pt-8 pb-8 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">Opsætning</h1>
-          <p className="text-muted-foreground text-sm">
-            Vi skal bruge et par detaljer for at komme i gang
+  const handleJoinSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      await joinSalon({ code: joinCode });
+      toast.success("Du er nu tilsluttet salonen!");
+      router.push("/dashboard");
+    } catch (error) {
+      toast.error("Kunne ikke tilslutte salon. Tjek koden.");
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (mode === "initial") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-gray-900">
+        <div className="mx-auto w-full max-w-3xl space-y-8 text-center">
+          <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">
+            Velkommen til KlipSync
+          </h1>
+          <p className="text-muted-foreground text-xl">
+            Hvordan vil du komme i gang?
           </p>
-        </CardHeader>
 
-        <CardContent className="px-8 pb-8">
-          {/* Simple Progress Bar */}
-          <div className="mb-8 flex items-center gap-2">
-            {steps.map((_, i) => (
-              <div
-                key={i}
-                className={`h-1 flex-1 rounded-full transition-colors ${
-                  i <= currentStep ? "bg-primary" : "bg-muted"
-                }`}
-              />
-            ))}
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card
+              className="hover:border-primary cursor-pointer transition-all hover:scale-105"
+              onClick={() => setMode("create")}
+            >
+              <CardHeader>
+                <Store className="text-primary mx-auto mb-4 h-12 w-12" />
+                <CardTitle className="text-2xl">Opret ny Salon</CardTitle>
+                <CardDescription>
+                  For salon-ejere. Opret din salon, dine services og inviter
+                  dine medarbejdere.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="text-muted-foreground list-inside list-disc text-left text-sm">
+                  <li>Opret din egen salon</li>
+                  <li>Administrer bestillinger</li>
+                  <li>Administrer personale</li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="hover:border-primary cursor-pointer transition-all hover:scale-105"
+              onClick={() => setMode("join")}
+            >
+              <CardHeader>
+                <Users className="mx-auto mb-4 h-12 w-12 text-blue-500" />
+                <CardTitle className="text-2xl">Tilslut Salon</CardTitle>
+                <CardDescription>
+                  For medarbejdere. Brug en invite-kode fra din chef til at
+                  komme i gang.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="text-muted-foreground list-inside list-disc text-left text-sm">
+                  <li>Se din kalender</li>
+                  <li>Administrer dine tider</li>
+                  <li>Bliv del af teamet</li>
+                </ul>
+              </CardContent>
+            </Card>
           </div>
+        </div>
+      </div>
+    );
+  }
 
-          <div className="mb-6">
-            <h2 className="text-lg font-medium">{steps[currentStep].title}</h2>
-            <p className="text-muted-foreground text-sm">
-              {steps[currentStep].description}
-            </p>
-          </div>
-
-          <div className="min-h-55">{steps[currentStep].content}</div>
-
-          {/* Footer Actions */}
-          {currentStep < steps.length - 1 && (
-            <div className="mt-8 flex items-center justify-between border-t pt-4">
+  if (mode === "join") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-gray-900">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <div className="mb-2 flex items-center gap-2">
               <Button
                 variant="ghost"
-                onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
-                disabled={currentStep === 0}
-                className="hover:text-primary pl-0 hover:bg-transparent"
+                size="sm"
+                onClick={() => setMode("initial")}
               >
-                <ChevronLeft className="mr-2 h-4 w-4" />
                 Tilbage
               </Button>
-              <Button
-                onClick={handleNext}
-                disabled={
-                  !salonData.name ||
-                  (currentStep === 1 && !hairdresserData.name)
-                }
-                className="px-8"
-              >
-                Næste
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Footer / Copyright / Safe Area */}
-      <div className="text-muted-foreground fixed bottom-4 w-full text-center text-xs">
-        KlipSync &copy; {new Date().getFullYear()}
+            <CardTitle>Tilslut Salon</CardTitle>
+            <CardDescription>
+              Indtast koden du har modtaget fra din salon-ejer.
+            </CardDescription>
+          </CardHeader>
+          <form onSubmit={handleJoinSubmit}>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="code">Invite Kode</Label>
+                <Input
+                  id="code"
+                  placeholder="F.eks. X8Y2Z9"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                  required
+                  className="text-center font-mono text-2xl tracking-widest uppercase"
+                  maxLength={8}
+                />
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button className="w-full" type="submit" disabled={isLoading}>
+                {isLoading ? "Tilslutter..." : "Tilslut Salon"}
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
       </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-gray-900">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <div className="mb-2 flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setMode("initial")}
+            >
+              Tilbage
+            </Button>
+          </div>
+          <CardTitle>Opret din Salon</CardTitle>
+          <CardDescription>
+            Indtast oplysninger om din salon for at komme i gang.
+          </CardDescription>
+        </CardHeader>
+        <form onSubmit={handleCreateSubmit}>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Salon Navn</Label>
+              <Input
+                id="name"
+                placeholder="F.eks. City Klip"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="address">Adresse</Label>
+              <Input
+                id="address"
+                placeholder="Gadenavn 123"
+                value={formData.address}
+                onChange={(e) =>
+                  setFormData({ ...formData, address: e.target.value })
+                }
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="city">By</Label>
+              <Input
+                id="city"
+                placeholder="København"
+                value={formData.city}
+                onChange={(e) =>
+                  setFormData({ ...formData, city: e.target.value })
+                }
+                required
+              />
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button className="w-full" type="submit" disabled={isLoading}>
+              {isLoading ? "Opretter..." : "Opret Salon"}
+              {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
     </div>
   );
 }

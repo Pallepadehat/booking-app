@@ -1,13 +1,18 @@
 "use client";
-import { useQuery } from "convex/react";
+
+import { useState } from "react";
+
+import { useMutation, useQuery } from "convex/react";
 import {
   Building2,
+  Copy,
   MoreHorizontal,
   Pencil,
   Plus,
   Trash,
   User,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +24,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -26,6 +40,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -34,17 +57,104 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 import { useSalon } from "@/modules/dashboard/ui/providers/salon-provider";
 
 export default function HairdressersPage() {
   const { activeSalon } = useSalon();
+
+  const createHairdresser = useMutation(api.hairdressers.createHairdresser);
+  const updateHairdresser = useMutation(api.hairdressers.updateHairdresser);
+  const createInvite = useMutation(api.invites.createInvite);
+
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+
+  const [selectedHairdresser, setSelectedHairdresser] = useState<{
+    id: Id<"hairdressers">;
+    name: string;
+    bio: string;
+    active: boolean;
+  } | null>(null);
+
+  const [formData, setFormData] = useState({ name: "", bio: "" });
+  const [inviteRole, setInviteRole] = useState<"stylist" | "manager">(
+    "stylist"
+  );
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
 
   // Conditionally fetch if we have an active salon
   const hairdressers = useQuery(
     api.hairdressers.getBySalonId,
     activeSalon ? { salonId: activeSalon._id } : "skip"
   );
+
+  const handleAddSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeSalon) return;
+    try {
+      await createHairdresser({
+        salonId: activeSalon._id,
+        name: formData.name,
+        bio: formData.bio,
+      });
+      setIsAddOpen(false);
+      setFormData({ name: "", bio: "" });
+      toast.success("Frisør oprettet");
+    } catch (error) {
+      toast.error("Kunne ikke oprette frisør");
+    }
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedHairdresser) return;
+    try {
+      await updateHairdresser({
+        id: selectedHairdresser.id,
+        name: selectedHairdresser.name,
+        bio: selectedHairdresser.bio,
+        active: selectedHairdresser.active,
+      });
+      setIsEditOpen(false);
+      toast.success("Frisør opdateret");
+    } catch (error) {
+      toast.error("Kunne ikke opdatere frisør");
+    }
+  };
+
+  const handleCreateInvite = async () => {
+    if (!activeSalon) return;
+    try {
+      const code = await createInvite({
+        salonId: activeSalon._id,
+        role: inviteRole,
+      });
+      setInviteCode(code);
+    } catch (error) {
+      toast.error("Kunne ikke generere kode");
+    }
+  };
+
+  const copyToClipboard = () => {
+    if (inviteCode) {
+      navigator.clipboard.writeText(inviteCode);
+      toast.success("Kode kopieret");
+    }
+  };
+
+  const openEdit = (hairdresser: any) => {
+    setSelectedHairdresser({
+      id: hairdresser._id,
+      name: hairdresser.name,
+      bio: hairdresser.bio || "",
+      active: hairdresser.active,
+    });
+    setIsEditOpen(true);
+  };
 
   if (!activeSalon) {
     return (
@@ -68,10 +178,120 @@ export default function HairdressersPage() {
             </span>
           </p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Tilføj frisør
-        </Button>
+        <div className="flex gap-2">
+          <Dialog
+            open={isInviteOpen}
+            onOpenChange={(open) => {
+              setIsInviteOpen(open);
+              if (!open) {
+                setInviteCode(null);
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button variant="outline">Generer Invite Kode</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Inviter Personale</DialogTitle>
+                <DialogDescription>
+                  Generer en engangskode som en ny medarbejder kan bruge til at
+                  tilslutte sig salonen.
+                </DialogDescription>
+              </DialogHeader>
+              {!inviteCode ? (
+                <div className="grid gap-4 py-4">
+                  <div className="grid items-center gap-4">
+                    <Label>Rolle</Label>
+                    <Select
+                      value={inviteRole}
+                      onValueChange={(v: "stylist" | "manager") =>
+                        setInviteRole(v)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="stylist">
+                          Frisør (Stylist)
+                        </SelectItem>
+                        <SelectItem value="manager">
+                          Bestyrer (Manager)
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={handleCreateInvite}>Generer Kode</Button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-4 py-4">
+                  <div className="font-mono text-4xl font-bold tracking-widest">
+                    {inviteCode}
+                  </div>
+                  <Button
+                    variant="secondary"
+                    onClick={copyToClipboard}
+                    className="gap-2"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Kopier Kode
+                  </Button>
+                  <p className="text-muted-foreground text-xs">
+                    Koden udløber om 30 dage.
+                  </p>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Tilføj frisør
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Tilføj ny frisør</DialogTitle>
+                <DialogDescription>
+                  Opret en profil til en ny frisør i salonen.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleAddSubmit}>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name">Navn</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                      placeholder="F.eks. Lise Jensen"
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="bio">Bio (Valgfri)</Label>
+                    <Textarea
+                      id="bio"
+                      value={formData.bio}
+                      onChange={(e) =>
+                        setFormData({ ...formData, bio: e.target.value })
+                      }
+                      placeholder="Kort beskrivelse..."
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit">Opret</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Card>
@@ -87,15 +307,15 @@ export default function HairdressersPage() {
             <div className="flex items-center space-x-4">
               <div className="bg-muted h-12 w-12 animate-pulse rounded-full" />
               <div className="space-y-2">
-                <div className="bg-muted h-4 w-[250px] animate-pulse rounded" />
-                <div className="bg-muted h-4 w-[200px] animate-pulse rounded" />
+                <div className="bg-muted h-4 w-64 animate-pulse rounded" />
+                <div className="bg-muted h-4 w-48 animate-pulse rounded" />
               </div>
             </div>
             <div className="flex items-center space-x-4">
               <div className="bg-muted h-12 w-12 animate-pulse rounded-full" />
               <div className="space-y-2">
-                <div className="bg-muted h-4 w-[250px] animate-pulse rounded" />
-                <div className="bg-muted h-4 w-[200px] animate-pulse rounded" />
+                <div className="bg-muted h-4 w-64 animate-pulse rounded" />
+                <div className="bg-muted h-4 w-48 animate-pulse rounded" />
               </div>
             </div>
           </div>
@@ -106,7 +326,9 @@ export default function HairdressersPage() {
             <p className="mb-4">
               Der er ikke oprettet nogen frisører for denne salon endnu.
             </p>
-            <Button variant="outline">Tilføj din første frisør</Button>
+            <Button variant="outline" onClick={() => setIsAddOpen(true)}>
+              Tilføj din første frisør
+            </Button>
           </div>
         ) : (
           <Table>
@@ -159,7 +381,7 @@ export default function HairdressersPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Handlinger</DropdownMenuLabel>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openEdit(hairdresser)}>
                           <Pencil className="mr-2 h-4 w-4" />
                           Rediger
                         </DropdownMenuItem>
@@ -177,6 +399,53 @@ export default function HairdressersPage() {
           </Table>
         )}
       </Card>
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rediger frisør</DialogTitle>
+          </DialogHeader>
+          {selectedHairdresser && (
+            <form onSubmit={handleEditSubmit}>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-name">Navn</Label>
+                  <Input
+                    id="edit-name"
+                    value={selectedHairdresser.name}
+                    onChange={(e) =>
+                      setSelectedHairdresser({
+                        ...selectedHairdresser,
+                        name: e.target.value,
+                      })
+                    }
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-bio">Bio</Label>
+                  <Textarea
+                    id="edit-bio"
+                    value={selectedHairdresser.bio}
+                    onChange={(e) =>
+                      setSelectedHairdresser({
+                        ...selectedHairdresser,
+                        bio: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                {/* 
+                  To implement: Toggle switch for 'active'.
+                  For now, omitted or basic checkbox could work, but user didn't explicitly ask for UI toggles, just "Add and Edit works".
+                */}
+              </div>
+              <DialogFooter>
+                <Button type="submit">Gem ændringer</Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
