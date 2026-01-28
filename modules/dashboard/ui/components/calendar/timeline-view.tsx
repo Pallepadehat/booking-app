@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-import { Id } from "@/convex/_generated/dataModel";
+import { Doc, Id } from "@/convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
 
 interface Appointment {
@@ -25,6 +25,7 @@ interface TimelineViewProps {
   appointments: Appointment[];
   onSlotClick: (hairdresserId: Id<"hairdressers">, time: Date) => void;
   onAppointmentClick: (appointment: Appointment) => void;
+  salonOpeningHours?: Doc<"salons">["openingHours"];
 }
 
 export function TimelineView({
@@ -33,16 +34,39 @@ export function TimelineView({
   appointments,
   onSlotClick,
   onAppointmentClick,
+  salonOpeningHours,
 }: TimelineViewProps) {
-  // Hours to display: 8:00 to 18:00
-  const startHour = 8;
-  const endHour = 18;
+  const { startHour, endHour } = useMemo(() => {
+    if (!salonOpeningHours) return { startHour: 8, endHour: 18 };
+
+    const days = [
+      "sunday",
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+    ];
+    const dayName = days[date.getDay()] as keyof typeof salonOpeningHours;
+    // @ts-ignore
+    const dayConfig = salonOpeningHours[dayName];
+
+    if (!dayConfig || !dayConfig.isOpen) return { startHour: 8, endHour: 18 };
+
+    const start = parseInt(dayConfig.start.split(":")[0]) || 8;
+    const end =
+      Math.ceil(
+        parseInt(dayConfig.end.split(":")[0]) +
+          (dayConfig.end.includes(":30") ? 0.5 : 0)
+      ) || 18;
+
+    return { startHour: start, endHour: end };
+  }, [date, salonOpeningHours]);
+
   const hours = useMemo(() => {
-    return Array.from(
-      { length: endHour - startHour + 1 },
-      (_, i) => startHour + i
-    );
-  }, []);
+    return Array.from({ length: endHour - startHour }, (_, i) => startHour + i);
+  }, [startHour, endHour]);
 
   const getPositionStyle = (start: number, end: number) => {
     const dayStart = new Date(date);
