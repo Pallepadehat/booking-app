@@ -77,16 +77,51 @@ export default function BookingPage() {
 
     const slots: Date[] = [];
     const durationMs = selectedService.durationMinutes * 60 * 1000;
-    const startHour = 8;
-    const endHour = 18;
 
-    for (let h = startHour; h < endHour; h++) {
-      const slot1 = new Date(date);
-      slot1.setHours(h, 0, 0, 0);
-      slots.push(slot1);
-      const slot2 = new Date(date);
-      slot2.setHours(h, 30, 0, 0);
-      slots.push(slot2);
+    // Get opening hours
+    const days = [
+      "sunday",
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+    ];
+    const dayName = days[date.getDay()];
+    // @ts-ignore
+    const dayConfig = salon?.openingHours?.[dayName];
+
+    // If closed or no config, return empty
+    if (!dayConfig || !dayConfig.isOpen) return [];
+
+    const [startH, startM] = dayConfig.start.split(":").map(Number);
+    const [endH, endM] = dayConfig.end.split(":").map(Number);
+
+    const startTotalMinutes = startH * 60 + startM;
+    const endTotalMinutes = endH * 60 + endM;
+
+    // Generate slots every 30 minutes
+    const stepMinutes = 30;
+
+    for (let m = startTotalMinutes; m < endTotalMinutes; m += stepMinutes) {
+      const slot = new Date(date);
+      slot.setHours(Math.floor(m / 60), m % 60, 0, 0);
+
+      // Filter out slots that would exceed closing time
+      if (
+        slot.getTime() + durationMs >
+        new Date(date).setHours(
+          Math.floor(endTotalMinutes / 60),
+          endTotalMinutes % 60,
+          0,
+          0
+        )
+      ) {
+        continue;
+      }
+
+      slots.push(slot);
     }
 
     return slots.filter((slot) => {

@@ -7,6 +7,31 @@ export default defineSchema({
     address: v.string(),
     city: v.string(),
     ownerId: v.string(),
+    openingHours: v.optional(
+      v.object({
+        monday: v.optional(
+          v.object({ start: v.string(), end: v.string(), isOpen: v.boolean() })
+        ),
+        tuesday: v.optional(
+          v.object({ start: v.string(), end: v.string(), isOpen: v.boolean() })
+        ),
+        wednesday: v.optional(
+          v.object({ start: v.string(), end: v.string(), isOpen: v.boolean() })
+        ),
+        thursday: v.optional(
+          v.object({ start: v.string(), end: v.string(), isOpen: v.boolean() })
+        ),
+        friday: v.optional(
+          v.object({ start: v.string(), end: v.string(), isOpen: v.boolean() })
+        ),
+        saturday: v.optional(
+          v.object({ start: v.string(), end: v.string(), isOpen: v.boolean() })
+        ),
+        sunday: v.optional(
+          v.object({ start: v.string(), end: v.string(), isOpen: v.boolean() })
+        ),
+      })
+    ),
   }).index("by_owner", ["ownerId"]),
 
   memberships: defineTable({

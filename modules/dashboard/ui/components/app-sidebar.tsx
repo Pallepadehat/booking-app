@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 
 import {
   BarChart3,
-  Building2,
   CalendarDays,
   Home,
   Scissors,
@@ -37,7 +36,6 @@ const menuItems: MenuItem[] = [
   { title: "Kalender", url: "/dashboard/calendar", icon: CalendarDays },
   { title: "Frisører", url: "/dashboard/hairdressers", icon: Scissors },
   { title: "Kunder", url: "/dashboard/customers", icon: Users },
-  { title: "Saloner", url: "/dashboard/salons", icon: Building2 },
   { title: "Stats", url: "/dashboard/stats", icon: BarChart3 },
   { title: "Indstillinger", url: "/dashboard/settings", icon: Settings },
 ];
