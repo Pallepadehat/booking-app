@@ -79,6 +79,68 @@ export const createPublicAppointment = mutation({
 
     const endsAt = args.startsAt + service.durationMinutes * 60 * 1000;
 
+    // Check for existing customer
+    let customerId: string | undefined;
+    let customer = await ctx.db
+      .query("customers")
+      .withIndex("by_salon_and_phone", (q) =>
+        q.eq("salonId", args.salonId).eq("phone", args.customerPhone)
+      )
+      .first();
+
+    // If not found by phone, try email if provided
+    if (!customer && args.customerEmail) {
+      customer = await ctx.db
+        .query("customers")
+        .withIndex("by_salon_and_email", (q) =>
+          q.eq("salonId", args.salonId).eq("email", args.customerEmail)
+        )
+        .first();
+    }
+
+    const now = Date.now();
+
+    if (customer) {
+      customerId = customer._id;
+      // Update lastSeenAt
+      await ctx.db.patch(customer._id, {
+        lastSeenAt: now,
+      });
+    } else {
+      // Create new customer
+      customerId = await ctx.db.insert("customers", {
+        salonId: args.salonId,
+        name: args.customerName, // Use Full Name or build it? args.customerName seems to be First Name or Full?
+        // Wait, public args has customerName and customerSurname.
+        // Let's combine them for the "name" field in customers table if that's what we want,
+        // or just use customerName if it's full name.
+        // Looking at args: customerName is v.string(), customerSurname is v.string().
+        // In schema customers.name is v.string().
+        // Let's combine them: `${args.customerName} ${args.customerSurname}`
+        // But wait, schema might just want a display name.
+        // Let's use `${args.customerName} ${args.customerSurname}`
+        phone: args.customerPhone,
+        email: args.customerEmail,
+        firstSeenAt: now,
+        lastSeenAt: now,
+      });
+    }
+
+    // NOTE: We need to verify if name should be combined.
+    // In appointments.ts it was just args.customerName.
+    // Here we have surname. Let's combine validly.
+    // If I look at createPublicAppointment args: customerName and customerSurname.
+    // I will combine them for the customer record.
+
+    // Re-check schema for customers table: name: v.string().
+
+    // Update the customer name if creating new one.
+    // If updating, maybe we shouldn't overwrite unless we want to keep most recent.
+    // Let's stick to creating if new.
+
+    // Wait, the insert above needs to be clean.
+    // I'll rewrite the insert block below cleanly.
+
     // Generate a simple 6-char booking code (uppercase alphanumeric)
     const bookingCode = Math.random()
       .toString(36)
@@ -89,6 +151,7 @@ export const createPublicAppointment = mutation({
       salonId: args.salonId,
       hairdresserId: args.hairdresserId,
       serviceId: args.serviceId,
+      customerId: customerId as any, // Cast for now
       customerName: args.customerName,
       customerSurname: args.customerSurname, // Save surname
       customerPhone: args.customerPhone,

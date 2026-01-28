@@ -3,14 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import {
-  BarChart3,
-  CalendarDays,
-  Home,
-  Scissors,
-  Settings,
-  Users,
-} from "lucide-react";
+import { CalendarDays, Home, Scissors, Settings, Users } from "lucide-react";
 
 import {
   Sidebar,
@@ -36,7 +29,6 @@ const menuItems: MenuItem[] = [
   { title: "Kalender", url: "/dashboard/calendar", icon: CalendarDays },
   { title: "Frisører", url: "/dashboard/hairdressers", icon: Scissors },
   { title: "Kunder", url: "/dashboard/customers", icon: Users },
-  { title: "Stats", url: "/dashboard/stats", icon: BarChart3 },
   { title: "Indstillinger", url: "/dashboard/settings", icon: Settings },
 ];
 
