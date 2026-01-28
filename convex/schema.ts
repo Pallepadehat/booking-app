@@ -64,13 +64,18 @@ export default defineSchema({
     startsAt: v.number(),
     endsAt: v.number(),
 
+    // PUBLIC PORTAL FIELDS
+    bookingCode: v.optional(v.string()), // 6-char alphanumeric
+    customerSurname: v.optional(v.string()), // used as "password"
+
     status: v.union(
       v.literal("booked"),
       v.literal("cancelled"),
       v.literal("completed")
     ),
-    createdBy: v.string(),
+    createdBy: v.optional(v.string()), // optional because public bookings have no user
   })
     .index("by_salon_and_start", ["salonId", "startsAt"])
-    .index("by_hairdresser_and_start", ["hairdresserId", "startsAt"]),
+    .index("by_hairdresser_and_start", ["hairdresserId", "startsAt"])
+    .index("by_booking_code", ["bookingCode"]),
 });
