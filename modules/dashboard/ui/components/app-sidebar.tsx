@@ -24,6 +24,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { SalonSwitcher } from "@/modules/dashboard/ui/components/salon-switcher";
 
 type MenuItem = {
   title: string;
@@ -48,18 +49,9 @@ export default function AppSidebar() {
     <Sidebar variant="inset" collapsible="icon">
       <SidebarContent>
         {/* Logo - altid synligt */}
-        <SidebarGroup className="mt-4 mb-8">
+        <SidebarGroup className="mt-4">
           <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/dashboard" className="w-full">
-                    <Scissors className="h-5 w-5" />
-                    <span>Cut&apos;n Go</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
+            <SalonSwitcher />
           </SidebarGroupContent>
         </SidebarGroup>
 

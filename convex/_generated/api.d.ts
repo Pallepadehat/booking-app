@@ -9,7 +9,11 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as hairdressers from "../hairdressers.js";
 import type * as http from "../http.js";
+import type * as invites from "../invites.js";
+import type * as onboarding from "../onboarding.js";
+import type * as salons from "../salons.js";
 
 import type {
   ApiFromModules,
@@ -19,7 +23,11 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  hairdressers: typeof hairdressers;
   http: typeof http;
+  invites: typeof invites;
+  onboarding: typeof onboarding;
+  salons: typeof salons;
 }>;
 
 /**
