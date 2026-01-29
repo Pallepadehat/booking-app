@@ -5,9 +5,9 @@ import { useMemo } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { CalendarCheck, Coins, Database, Scissors } from "lucide-react";
 import {
-  Area,
-  AreaChart,
+  Bar,
   CartesianGrid,
+  ComposedChart,
   PolarAngleAxis,
   PolarGrid,
   Radar,
@@ -32,13 +32,13 @@ import { useSalon } from "@/modules/dashboard/ui/providers/salon-provider";
 export default function DashboardPage() {
   const { activeSalon } = useSalon();
 
-  // Fast query: Today's bookings and Charts (Last 6 months)
+  // Fast query: Today's bookings and Charts (Last 12 months - Lifetime view)
   const recentStats = useQuery(
     api.dashboard.getRecentStats,
     activeSalon ? { salonId: activeSalon._id } : "skip"
   );
 
-  // Slow query: Lifetime totals
+  // Instant query: Lifetime totals from pre-computed stats
   const lifetimeStats = useQuery(
     api.dashboard.getLifetimeStats,
     activeSalon ? { salonId: activeSalon._id } : "skip"
@@ -184,33 +184,7 @@ export default function DashboardPage() {
               config={monthChartConfig}
               className="aspect-auto h-[350px] w-full"
             >
-              <AreaChart data={recentStats.monthlyData}>
-                <defs>
-                  <linearGradient id="fillEarnings" x1="0" y1="0" x2="0" y2="1">
-                    <stop
-                      offset="5%"
-                      stopColor="var(--color-earnings)"
-                      stopOpacity={0.8}
-                    />
-                    <stop
-                      offset="95%"
-                      stopColor="var(--color-earnings)"
-                      stopOpacity={0.1}
-                    />
-                  </linearGradient>
-                  <linearGradient id="fillCuts" x1="0" y1="0" x2="0" y2="1">
-                    <stop
-                      offset="5%"
-                      stopColor="var(--color-cuts)"
-                      stopOpacity={0.8}
-                    />
-                    <stop
-                      offset="95%"
-                      stopColor="var(--color-cuts)"
-                      stopOpacity={0.1}
-                    />
-                  </linearGradient>
-                </defs>
+              <ComposedChart data={recentStats.monthlyData}>
                 <CartesianGrid
                   vertical={false}
                   strokeDasharray="3 3"
@@ -225,15 +199,6 @@ export default function DashboardPage() {
                   className="text-muted-foreground font-medium"
                 />
                 <YAxis
-                  yAxisId="right"
-                  orientation="right"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  className="text-muted-foreground font-medium"
-                />
-                <YAxis
-                  yAxisId="left"
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
@@ -241,37 +206,23 @@ export default function DashboardPage() {
                   tickFormatter={(value) => `${value / 1000}k`}
                 />
                 <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent indicator="dot" />}
+                  cursor={{ fill: "hsl(var(--muted))", opacity: 0.2 }}
+                  content={<ChartTooltipContent indicator="line" />}
                 />
-                <Area
-                  yAxisId="left"
+                <Bar
                   dataKey="earnings"
-                  type="monotone"
-                  fill="url(#fillEarnings)"
-                  fillOpacity={0.4}
-                  stroke="var(--color-earnings)"
-                  strokeWidth={2}
-                  stackId="a"
+                  fill="var(--color-earnings)"
+                  radius={[8, 8, 0, 0]}
+                  fillOpacity={0.8}
                 />
-                <Area
-                  yAxisId="right"
-                  dataKey="cuts"
-                  type="monotone"
-                  fill="url(#fillCuts)"
-                  fillOpacity={0.4}
-                  stroke="var(--color-cuts)"
-                  strokeWidth={2}
-                  stackId="b"
-                />
-              </AreaChart>
+              </ComposedChart>
             </ChartContainer>
           </CardContent>
         </Card>
 
         <Card className="col-span-3">
           <CardHeader>
-            <CardTitle>Frisør Performance (Sidste 6 mdr)</CardTitle>
+            <CardTitle>Frisør Performance (Sidste 12 mdr)</CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer

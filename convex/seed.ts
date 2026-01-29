@@ -17,8 +17,14 @@ export const seedDashboardData = mutation({
       const newServices = [
         { name: "Herreklip", duration: 30, price: 350 },
         { name: "Dameklip", duration: 60, price: 650 },
+        { name: "Dameklip Lang", duration: 90, price: 850 },
         { name: "Farvning", duration: 120, price: 1200 },
+        { name: "Highlights", duration: 150, price: 1500 },
+        { name: "Permanent", duration: 90, price: 900 },
         { name: "Børneklip", duration: 30, price: 250 },
+        { name: "Skæg Trim", duration: 20, price: 200 },
+        { name: "Styling", duration: 45, price: 400 },
+        { name: "Bryllupshår", duration: 120, price: 1800 },
       ];
 
       for (const s of newServices) {
@@ -45,13 +51,26 @@ export const seedDashboardData = mutation({
       .collect();
 
     if (hairdressers.length === 0) {
-      const names = ["Alice", "Bob", "Charlie", "Diana"];
+      const names = [
+        "Emma",
+        "Liam",
+        "Sophia",
+        "Noah",
+        "Olivia",
+        "Elijah",
+        "Ava",
+        "William",
+        "Isabella",
+        "James",
+        "Mia",
+        "Lucas",
+      ];
       for (const name of names) {
         await ctx.db.insert("hairdressers", {
           salonId,
           name,
           active: true,
-          bio: `Experienced stylist named ${name}`,
+          bio: `Professional stylist with 5+ years experience`,
         });
       }
       hairdressers = await ctx.db
@@ -67,23 +86,114 @@ export const seedDashboardData = mutation({
       .collect();
 
     if (customers.length === 0) {
-      const customerNames = [
-        "Emma Watson",
-        "Liam Neeson",
-        "Olivia Wilde",
-        "Noah Centineo",
-        "Ava Max",
-        "Elijah Wood",
-        "Sophia Turner",
-        "James Bond",
+      // Generate 50 customers for realistic large salon
+      const firstNames = [
+        "Emma",
+        "Liam",
+        "Sophia",
+        "Noah",
+        "Olivia",
+        "William",
+        "Ava",
+        "James",
+        "Isabella",
+        "Lucas",
+        "Mia",
+        "Alexander",
+        "Charlotte",
+        "Ethan",
+        "Amelia",
+        "Benjamin",
+        "Harper",
+        "Elijah",
+        "Evelyn",
+        "Logan",
+        "Abigail",
+        "Mason",
+        "Emily",
+        "Sebastian",
+        "Ella",
+        "Jack",
+        "Scarlett",
+        "Henry",
+        "Grace",
+        "Theodore",
+        "Chloe",
+        "Owen",
+        "Camila",
+        "Matthew",
+        "Penelope",
+        "Samuel",
+        "Layla",
+        "Joseph",
+        "Aria",
+        "David",
+        "Zoey",
+        "Carter",
+        "Nora",
+        "Wyatt",
+        "Lily",
+        "John",
+        "Eleanor",
+        "Dylan",
+        "Hannah",
+        "Luke",
       ];
-      for (const name of customerNames) {
+      const lastNames = [
+        "Hansen",
+        "Nielsen",
+        "Jensen",
+        "Andersen",
+        "Pedersen",
+        "Christensen",
+        "Larsen",
+        "Sørensen",
+        "Rasmussen",
+        "Jørgensen",
+        "Petersen",
+        "Madsen",
+        "Kristensen",
+        "Olsen",
+        "Thomsen",
+        "Christiansen",
+        "Poulsen",
+        "Johansen",
+        "Møller",
+        "Mortensen",
+        "Knudsen",
+        "Jakobsen",
+        "Winther",
+        "Lund",
+        "Bertelsen",
+      ];
+
+      const customerData = [];
+      for (let i = 0; i < 50; i++) {
+        const firstName = firstNames[i % firstNames.length];
+        const lastName = lastNames[i % lastNames.length];
+        customerData.push({
+          name: `${firstName} ${lastName}`,
+          phone:
+            `${20000000 + i * 100000 + Math.floor(Math.random() * 99999)}`.slice(
+              0,
+              8
+            ),
+        });
+      }
+
+      const now = Date.now();
+      for (let i = 0; i < customerData.length; i++) {
+        const data = customerData[i];
+        // Stagger firstSeenAt to make it realistic
+        const firstSeen =
+          now - (customerData.length - i) * 30 * 24 * 60 * 60 * 1000; // 30 days apart
         await ctx.db.insert("customers", {
           salonId,
-          name,
-          phone: Math.floor(Math.random() * 90000000 + 10000000).toString(),
-          firstSeenAt: Date.now(),
-          lastSeenAt: Date.now(),
+          name: data.name,
+          phone: data.phone,
+          email: `${data.name.toLowerCase().replace(" ", ".")}@example.com`,
+          firstSeenAt: firstSeen,
+          lastSeenAt: now,
         });
       }
       customers = await ctx.db
@@ -92,51 +202,95 @@ export const seedDashboardData = mutation({
         .collect();
     }
 
-    // 4. Generate Appointments (Last 6 Months + Next 1 Month)
-    const now = new Date();
-    const startDate = new Date(now);
-    startDate.setMonth(now.getMonth() - 6);
+    // 4. Initialize salon stats
+    const existingStats = await ctx.db
+      .query("salonStats")
+      .withIndex("by_salon", (q) => q.eq("salonId", salonId))
+      .first();
 
-    // We want a good distribution.
-    // Let's create ~300 appointments distributed randomly.
-    const TOTAL_APPTS_TO_GENERATE = 300;
-
-    for (let i = 0; i < TOTAL_APPTS_TO_GENERATE; i++) {
-      // Random days from startDate to now + 30 days
-      const limit = new Date(now);
-      limit.setDate(limit.getDate() + 30);
-
-      const randomTime =
-        startDate.getTime() +
-        Math.random() * (limit.getTime() - startDate.getTime());
-      const apptDate = new Date(randomTime);
-
-      // Random hour 9-17
-      apptDate.setHours(9 + Math.floor(Math.random() * 8), 0, 0, 0);
-
-      const service = services[Math.floor(Math.random() * services.length)];
-      const hairdresser =
-        hairdressers[Math.floor(Math.random() * hairdressers.length)];
-      const customer = customers[Math.floor(Math.random() * customers.length)];
-
-      let status: "completed" | "booked" | "cancelled" = "booked";
-      if (apptDate < now) {
-        status = Math.random() > 0.1 ? "completed" : "cancelled";
-      }
-
-      await ctx.db.insert("appointments", {
+    if (!existingStats) {
+      await ctx.db.insert("salonStats", {
         salonId,
-        hairdresserId: hairdresser._id,
-        serviceId: service._id,
-        customerId: customer._id,
-        customerName: customer.name,
-        customerPhone: customer.phone,
-        startsAt: apptDate.getTime(),
-        endsAt: apptDate.getTime() + service.durationMinutes * 60 * 1000,
-        status,
+        totalEarnings: 0,
+        totalCuts: 0,
+        lastUpdated: Date.now(),
       });
     }
 
-    return "Seeded successfully!";
+    // 5. Generate Appointments - MASSIVE DATA! EVENLY distributed across 12 months
+    const now = Date.now();
+    const TOTAL_APPTS = 20016; // ~20,000 appointments! Divisible by 12
+    const APPTS_PER_MONTH = TOTAL_APPTS / 12; // 1,668 per month
+
+    // Generate month by month for even distribution
+    for (let monthAgo = 11; monthAgo >= 0; monthAgo--) {
+      const monthStart = new Date(now);
+      monthStart.setMonth(monthStart.getMonth() - monthAgo);
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+
+      const monthEnd = new Date(monthStart);
+      monthEnd.setMonth(monthEnd.getMonth() + 1);
+      monthEnd.setDate(0); // Last day of month
+      monthEnd.setHours(23, 59, 59, 999);
+
+      // Generate appointments for this specific month
+      for (let i = 0; i < APPTS_PER_MONTH; i++) {
+        // Random timestamp within THIS month only
+        const randomTime =
+          monthStart.getTime() +
+          Math.random() * (monthEnd.getTime() - monthStart.getTime());
+        const apptDate = new Date(randomTime);
+
+        // Random business hour (9-17)
+        apptDate.setHours(9 + Math.floor(Math.random() * 8), 0, 0, 0);
+
+        const service = services[Math.floor(Math.random() * services.length)];
+        const hairdresser =
+          hairdressers[Math.floor(Math.random() * hairdressers.length)];
+        const customer =
+          customers[Math.floor(Math.random() * customers.length)];
+
+        // Determine status
+        let status: "completed" | "booked" | "cancelled" = "booked";
+        if (apptDate.getTime() < now) {
+          // Past: 85% completed, 15% cancelled
+          status = Math.random() > 0.15 ? "completed" : "cancelled";
+        }
+
+        // Create appointment
+        await ctx.db.insert("appointments", {
+          salonId,
+          hairdresserId: hairdresser._id,
+          serviceId: service._id,
+          customerId: customer._id,
+          customerName: customer.name,
+          customerPhone: customer.phone,
+          customerEmail: customer.email,
+          startsAt: apptDate.getTime(),
+          endsAt: apptDate.getTime() + service.durationMinutes * 60 * 1000,
+          status,
+          createdBy: "seed",
+        });
+
+        // Update stats for completed appointments
+        if (status === "completed") {
+          const stats = await ctx.db
+            .query("salonStats")
+            .withIndex("by_salon", (q) => q.eq("salonId", salonId))
+            .first();
+
+          if (stats) {
+            await ctx.db.patch(stats._id, {
+              totalEarnings: stats.totalEarnings + service.priceDkk,
+              totalCuts: stats.totalCuts + 1,
+              lastUpdated: now,
+            });
+          }
+        }
+      }
+    }
+
+    return `Seeded ${TOTAL_APPTS} appointments evenly across 12 months (${APPTS_PER_MONTH} per month)!`;
   },
 });

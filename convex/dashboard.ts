@@ -9,12 +9,12 @@ export const getRecentStats = query({
     const todayStart = new Date(now).setHours(0, 0, 0, 0);
     const todayEnd = new Date(now).setHours(23, 59, 59, 999);
 
-    // Calculate start of 6 months ago for the chart range
-    const sixMonthsAgo = new Date(now);
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
-    sixMonthsAgo.setDate(1);
-    sixMonthsAgo.setHours(0, 0, 0, 0);
-    const sixMonthsAgoTimestamp = sixMonthsAgo.getTime();
+    // Calculate start of 12 months ago for the chart range (LIFETIME view)
+    const twelveMonthsAgo = new Date(now);
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11);
+    twelveMonthsAgo.setDate(1);
+    twelveMonthsAgo.setHours(0, 0, 0, 0);
+    const twelveMonthsAgoTimestamp = twelveMonthsAgo.getTime();
 
     // Fetch data in parallel
     const [completedAppointments, todayAppointments, services, hairdressers] =
@@ -25,9 +25,9 @@ export const getRecentStats = query({
             q
               .eq("salonId", args.salonId)
               .eq("status", "completed")
-              .gte("startsAt", sixMonthsAgoTimestamp)
+              .gte("startsAt", twelveMonthsAgoTimestamp)
           )
-          .take(1000),
+          .take(2000), // Increased for 12 months
         ctx.db
           .query("appointments")
           .withIndex("by_salon_and_start", (q) =>
@@ -57,12 +57,12 @@ export const getRecentStats = query({
       (appt) => appt.status !== "cancelled"
     ).length;
 
-    // Initialize monthly buckets for last 6 months (using Danish locale)
+    // Initialize monthly buckets for last 12 months (using Danish locale)
     const monthlyStatsMap = new Map<
       string,
       { earnings: number; cuts: number }
     >();
-    for (let i = 5; i >= 0; i--) {
+    for (let i = 11; i >= 0; i--) {
       const date = new Date(now);
       date.setMonth(date.getMonth() - i);
       const key = date.toLocaleString("da-DK", { month: "long" });
