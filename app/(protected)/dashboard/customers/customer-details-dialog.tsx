@@ -1,11 +1,21 @@
 "use client";
 
-import React from "react";
 import { useQuery } from "convex/react";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
-import { Calendar, Clock, Loader2, Mail, Phone, User, CheckCircle2, XCircle, CalendarClock } from "lucide-react";
+import {
+  Calendar,
+  CalendarClock,
+  CheckCircle2,
+  Clock,
+  Loader2,
+  Mail,
+  Phone,
+  Scissors,
+  XCircle,
+} from "lucide-react";
 
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -15,12 +25,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
-import { useSalon } from "@/modules/dashboard/ui/providers/salon-provider";
 import { cn } from "@/lib/utils";
+import { useSalon } from "@/modules/dashboard/ui/providers/salon-provider";
 
 interface CustomerDetailsDialogProps {
   customerId: string | null;
@@ -45,7 +52,7 @@ export function CustomerDetailsDialog({
   const formatDate = (ms: number) => {
     return format(new Date(ms), "d. MMMM yyyy", { locale: da });
   };
-  
+
   const formatTime = (ms: number) => {
     return format(new Date(ms), "HH:mm", { locale: da });
   };
@@ -60,143 +67,217 @@ export function CustomerDetailsDialog({
   };
 
   const getStatusIcon = (status: string) => {
-    switch(status) {
-        case "completed": return <CheckCircle2 className="h-4 w-4 text-green-600" />;
-        case "cancelled": return <XCircle className="h-4 w-4 text-red-600" />;
-        default: return <CalendarClock className="h-4 w-4 text-blue-600" />;
+    switch (status) {
+      case "completed":
+        return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+      case "cancelled":
+        return <XCircle className="h-4 w-4 text-red-600" />;
+      default:
+        return <CalendarClock className="h-4 w-4 text-blue-600" />;
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh] p-0 gap-0 overflow-hidden bg-background">
-        
-        {/* Header Section */}
-        <div className="bg-muted/30 p-6 border-b">
-           <DialogHeader className="mb-4">
-            <DialogTitle className="sr-only">Kunde Detaljer</DialogTitle>
-             <DialogDescription className="sr-only">
-               Detaljeret visning af kunde og historik
-             </DialogDescription>
-          </DialogHeader>
-
-          {(!customerId || !customerData) ? (
-             <div className="flex h-40 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-             </div>
-          ) : (
-            <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <Avatar className="h-20 w-20 border-4 border-background shadow-sm">
-                        <AvatarFallback className="text-2xl bg-primary/10 text-primary font-medium">
-                            {getInitials(customerData.customer.name)}
-                        </AvatarFallback>
-                    </Avatar>
-                    <div>
-                        <h2 className="text-2xl font-bold tracking-tight">{customerData.customer.name}</h2>
-                        <div className="flex flex-col gap-1 mt-1 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-2">
-                                <Phone className="h-3.5 w-3.5" />
-                                <span>{customerData.customer.phone}</span>
-                            </div>
-                            {customerData.customer.email && (
-                            <div className="flex items-center gap-2">
-                                <Mail className="h-3.5 w-3.5" />
-                                <span>{customerData.customer.email}</span>
-                            </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* KPI Cards */}
-                <div className="flex gap-3 w-full md:w-auto">
-                     <div className="flex-1 md:w-32 bg-card rounded-xl border p-3 flex flex-col items-center justify-center shadow-sm">
-                        <span className="text-3xl font-bold tracking-tighter">{customerData.stats.totalBookings}</span>
-                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Total</span>
-                     </div>
-                     <div className="flex-1 md:w-32 bg-card rounded-xl border p-3 flex flex-col items-center justify-center shadow-sm">
-                        <span className="text-3xl font-bold tracking-tighter text-green-600">{customerData.stats.completed}</span>
-                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Besøg</span>
-                     </div>
-                     <div className="flex-1 md:w-32 bg-card rounded-xl border p-3 flex flex-col items-center justify-center shadow-sm">
-                        <span className="text-3xl font-bold tracking-tighter text-red-500">{customerData.stats.cancelled}</span>
-                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Aflyst</span>
-                     </div>
-                </div>
+      <DialogContent className="flex max-h-[85vh] max-w-md flex-col gap-0 overflow-hidden border bg-zinc-50 p-0 shadow-2xl transition-all md:max-w-2xl dark:bg-zinc-950">
+        {!customerId || !customerData ? (
+          <div className="bg-background flex h-64 items-center justify-center">
+            <Loader2 className="text-primary h-8 w-8 animate-spin" />
+            <div className="sr-only">
+              <DialogTitle>Indlæser...</DialogTitle>
+              <DialogDescription>Henter kundedata</DialogDescription>
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <>
+            <DialogHeader className="sr-only">
+              <DialogTitle>{customerData.customer.name}</DialogTitle>
+              <DialogDescription>Kunde Detaljer</DialogDescription>
+            </DialogHeader>
 
-        {/* Content Section */}
-        {customerId && customerData && (
-             <div className="flex-1 overflow-hidden flex flex-col bg-background">
-                <div className="p-4 border-b bg-muted/10">
-                    <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        Tidslinje
-                    </h3>
+            {/* Banner & Profile Section */}
+            <div className="bg-background relative shrink-0">
+              {/* Decorative Gradient Banner */}
+              <div className="h-24 w-full border-b bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-purple-600/10" />
+
+              <div className="px-6 pb-6">
+                {/* Avatar wrapper - Negative margin to pull up */}
+                <div className="-mt-10 mb-3 flex items-end">
+                  <Avatar className="border-background ring-border/10 h-20 w-20 border-4 shadow-lg ring-1">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-bold">
+                      {getInitials(customerData.customer.name)}
+                    </AvatarFallback>
+                  </Avatar>
                 </div>
-                <ScrollArea className="flex-1 h-[400px]">
-                    <div className="p-6 relative">
-                        {/* Vertical line through timeline */}
-                        <div className="absolute left-[29px] top-6 bottom-6 w-px bg-border" />
-                        
-                        <div className="space-y-8"> 
-                            {customerData.appointments.length === 0 ? (
-                                <div className="text-center py-12 text-muted-foreground">
-                                    Ingen historik fundet.
-                                </div>
-                            ) : (
-                                customerData.appointments.map((appt: any, index: number) => {
-                                    const isPast = appt.endsAt < Date.now();
-                                    return (
-                                        <div key={appt._id} className="relative pl-10 group">
-                                            {/* Timeline dot */}
-                                            <div className={cn(
-                                                "absolute left-0 top-1.5 h-3.5 w-3.5 rounded-full border-2 ring-4 ring-background",
-                                                isPast ? "bg-muted-foreground border-muted-foreground" : "bg-primary border-primary"
-                                            )} />
-                                            
-                                            <div className="flex flex-col gap-1">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="font-semibold text-base flex items-center gap-2">
-                                                        {formatDate(appt.startsAt)}
-                                                        <span className="font-normal text-muted-foreground mx-1">•</span>
-                                                        {formatTime(appt.startsAt)}
-                                                    </span>
-                                                    <Badge variant={appt.status === 'booked' ? "default" : "secondary"} className="capitalize">
-                                                        {appt.status === 'booked' ? 'Booket' : (appt.status === 'completed' ? 'Gennemført' : 'Aflyst')}
-                                                    </Badge>
-                                                </div>
-                                                
-                                                <div className="p-4 rounded-lg border bg-card shadow-sm mt-2 group-hover:border-primary/50 transition-colors">
-                                                    <div className="flex justify-between items-start">
-                                                        <div>
-                                                            <div className="font-medium text-foreground">Behandling</div>
-                                                            <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
-                                                                <Clock className="h-3.5 w-3.5" />
-                                                                {Math.round((appt.endsAt - appt.startsAt) / 60000)} minutter
-                                                            </div>
-                                                        </div>
-                                                        {appt.bookingCode && (
-                                                            <div className="text-xs font-mono bg-muted px-2 py-1 rounded text-muted-foreground">
-                                                                #{appt.bookingCode}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            )}
-                        </div>
-                    </div>
-                </ScrollArea>
-             </div>
-        )}
 
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-foreground text-2xl font-bold tracking-tight">
+                      {customerData.customer.name}
+                    </h2>
+                  </div>
+
+                  <div className="text-muted-foreground flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:gap-4">
+                    <div className="hover:text-foreground flex items-center gap-1.5 transition-colors">
+                      <Phone className="h-3.5 w-3.5" />
+                      <span className="font-medium">
+                        {customerData.customer.phone}
+                      </span>
+                    </div>
+                    {customerData.customer.email && (
+                      <div className="hover:text-foreground flex items-center gap-1.5 transition-colors">
+                        <Mail className="h-3.5 w-3.5" />
+                        <span>{customerData.customer.email}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="bg-background grid shrink-0 grid-cols-3 divide-x border-y">
+              <div className="hover:bg-muted/50 flex flex-col items-center justify-center p-3 transition-colors sm:p-4">
+                <span className="text-muted-foreground mb-1 text-xs font-semibold tracking-wider uppercase">
+                  Bookinger
+                </span>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-blue-500" />
+                  <span className="text-xl font-bold tabular-nums sm:text-2xl">
+                    {customerData.stats.totalBookings}
+                  </span>
+                </div>
+              </div>
+              <div className="hover:bg-muted/50 flex flex-col items-center justify-center p-3 transition-colors sm:p-4">
+                <span className="text-muted-foreground mb-1 text-xs font-semibold tracking-wider uppercase">
+                  Gennemført
+                </span>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span className="text-foreground text-xl font-bold tabular-nums sm:text-2xl">
+                    {customerData.stats.completed}
+                  </span>
+                </div>
+              </div>
+              <div className="hover:bg-muted/50 flex flex-col items-center justify-center p-3 transition-colors sm:p-4">
+                <span className="text-muted-foreground mb-1 text-xs font-semibold tracking-wider uppercase">
+                  Aflyst
+                </span>
+                <div className="flex items-center gap-2">
+                  <XCircle className="h-4 w-4 text-red-500" />
+                  <span className="text-foreground text-xl font-bold tabular-nums sm:text-2xl">
+                    {customerData.stats.cancelled}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Timeline Section */}
+            <div className="bg-muted/5 flex min-h-0 flex-1 flex-col overflow-hidden">
+              <div className="flex shrink-0 items-center gap-2 border-b px-6 py-3">
+                <Clock className="text-muted-foreground h-4 w-4" />
+                <h3 className="text-foreground text-sm font-semibold">
+                  Aktivitet
+                </h3>
+              </div>
+
+              <ScrollArea className="flex-1">
+                <div className="p-6">
+                  {customerData.appointments.length === 0 ? (
+                    <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 py-12">
+                      <div className="bg-muted flex h-12 w-12 items-center justify-center rounded-full">
+                        <CalendarClock className="h-6 w-6 opacity-50" />
+                      </div>
+                      <p className="text-sm">Ingen historik fundet.</p>
+                    </div>
+                  ) : (
+                    <div className="relative space-y-6 pl-4">
+                      {/* Timeline Line */}
+                      <div className="bg-border/50 absolute top-2 bottom-2 left-4 w-[2px]" />
+
+                      {customerData.appointments.map(
+                        (appt: any, index: number) => {
+                          const isPast = appt.endsAt < Date.now();
+                          const isCompleted = appt.status === "completed";
+                          const isCancelled = appt.status === "cancelled";
+
+                          return (
+                            <div key={appt._id} className="group relative pl-8">
+                              {/* Timeline Dot */}
+                              <div
+                                className={cn(
+                                  "ring-background absolute top-4 left-[11px] z-10 h-2.5 w-2.5 rounded-full border ring-4 transition-colors",
+                                  isCompleted
+                                    ? "border-green-500 bg-green-500"
+                                    : isCancelled
+                                      ? "border-red-500 bg-red-500"
+                                      : "border-blue-500 bg-blue-500"
+                                )}
+                              />
+
+                              <div className="bg-card hover:border-primary/20 rounded-lg border p-4 shadow-sm transition-all group-hover:shadow-md">
+                                <div className="mb-2 flex items-start justify-between">
+                                  <div className="flex flex-col">
+                                    <span className="text-foreground flex items-center gap-2 text-sm font-semibold">
+                                      {formatDate(appt.startsAt)}
+                                    </span>
+                                    <span className="text-muted-foreground text-xs">
+                                      {formatTime(appt.startsAt)} -{" "}
+                                      {formatTime(appt.endsAt)}
+                                    </span>
+                                  </div>
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      "border-0 font-medium capitalize",
+                                      isCompleted
+                                        ? "bg-green-500/10 text-green-700 hover:bg-green-500/20"
+                                        : isCancelled
+                                          ? "bg-red-500/10 text-red-700 hover:bg-red-500/20"
+                                          : "bg-blue-500/10 text-blue-700 hover:bg-blue-500/20"
+                                    )}
+                                  >
+                                    {appt.status === "booked"
+                                      ? "Booket"
+                                      : appt.status === "completed"
+                                        ? "Gennemført"
+                                        : "Aflyst"}
+                                  </Badge>
+                                </div>
+
+                                <div className="mt-2 flex items-center gap-3 border-t pt-2">
+                                  <div className="bg-muted flex h-8 w-8 shrink-0 items-center justify-center rounded">
+                                    <Scissors className="text-muted-foreground h-4 w-4" />
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="text-sm leading-none font-medium">
+                                      Behandling
+                                    </span>
+                                    <span className="text-muted-foreground mt-1 text-xs">
+                                      {Math.round(
+                                        (appt.endsAt - appt.startsAt) / 60000
+                                      )}{" "}
+                                      minutter
+                                    </span>
+                                  </div>
+                                  {appt.bookingCode && (
+                                    <div className="text-muted-foreground bg-muted/50 ml-auto rounded px-1.5 py-0.5 font-mono text-[10px]">
+                                      #{appt.bookingCode}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+                      )}
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

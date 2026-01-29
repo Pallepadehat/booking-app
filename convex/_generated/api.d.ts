@@ -11,12 +11,16 @@
 import type * as appointments from "../appointments.js";
 import type * as auth from "../auth.js";
 import type * as customers from "../customers.js";
+import type * as dashboard from "../dashboard.js";
 import type * as hairdressers from "../hairdressers.js";
 import type * as http from "../http.js";
 import type * as invites from "../invites.js";
+import type * as migrations from "../migrations.js";
 import type * as onboarding from "../onboarding.js";
 import type * as public_ from "../public.js";
+import type * as salonStats from "../salonStats.js";
 import type * as salons from "../salons.js";
+import type * as seed from "../seed.js";
 import type * as services from "../services.js";
 import type * as settings from "../settings.js";
 
@@ -30,12 +34,16 @@ declare const fullApi: ApiFromModules<{
   appointments: typeof appointments;
   auth: typeof auth;
   customers: typeof customers;
+  dashboard: typeof dashboard;
   hairdressers: typeof hairdressers;
   http: typeof http;
   invites: typeof invites;
+  migrations: typeof migrations;
   onboarding: typeof onboarding;
   public: typeof public_;
+  salonStats: typeof salonStats;
   salons: typeof salons;
+  seed: typeof seed;
   services: typeof services;
   settings: typeof settings;
 }>;
