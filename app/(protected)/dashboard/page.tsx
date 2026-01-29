@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { useMutation, useQuery } from "convex/react";
 import { CalendarCheck, Coins, Database, Scissors } from "lucide-react";
 import {
@@ -23,36 +25,53 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/convex/_generated/api";
 import { useSalon } from "@/modules/dashboard/ui/providers/salon-provider";
 
 export default function DashboardPage() {
   const { activeSalon } = useSalon();
 
-  const stats = useQuery(
-    api.dashboard.getDashboardStats,
+  // Fast query: Today's bookings and Charts (Last 6 months)
+  const recentStats = useQuery(
+    api.dashboard.getRecentStats,
+    activeSalon ? { salonId: activeSalon._id } : "skip"
+  );
+
+  // Slow query: Lifetime totals
+  const lifetimeStats = useQuery(
+    api.dashboard.getLifetimeStats,
     activeSalon ? { salonId: activeSalon._id } : "skip"
   );
 
   const seedData = useMutation(api.seed.seedDashboardData);
 
-  const monthChartConfig = {
-    earnings: {
-      label: "Omsætning (DKK)",
-      color: "hsl(160 80% 50%)", // Emerald-like for earnings
-    },
-    cuts: {
-      label: "Behandlinger",
-      color: "hsl(220 80% 50%)", // Blue-like for cuts
-    },
-  } satisfies ChartConfig;
+  // Memoize chart configs to prevent re-creation on every render
+  const monthChartConfig = useMemo(
+    () =>
+      ({
+        earnings: {
+          label: "Omsætning (DKK)",
+          color: "hsl(160 80% 50%)", // Emerald-like for earnings
+        },
+        cuts: {
+          label: "Behandlinger",
+          color: "hsl(220 80% 50%)", // Blue-like for cuts
+        },
+      }) satisfies ChartConfig,
+    []
+  );
 
-  const radarChartConfig = {
-    bookings: {
-      label: "Bookinger",
-      color: "hsl(280 80% 50%)", // Purple-like for bookings
-    },
-  } satisfies ChartConfig;
+  const radarChartConfig = useMemo(
+    () =>
+      ({
+        bookings: {
+          label: "Bookinger",
+          color: "hsl(280 80% 50%)", // Purple-like for bookings
+        },
+      }) satisfies ChartConfig,
+    []
+  );
 
   const handleSeed = async () => {
     if (!activeSalon) return;
@@ -74,7 +93,8 @@ export default function DashboardPage() {
     );
   }
 
-  if (!stats) {
+  // Only block the entire page if recentStats (the main view) is loading
+  if (recentStats === undefined) {
     return (
       <div className="flex h-full items-center justify-center p-8">
         <div className="border-primary h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" />
@@ -102,10 +122,14 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {stats.totalEarnings.toLocaleString("da-DK", {
-                style: "currency",
-                currency: "DKK",
-              })}
+              {lifetimeStats ? (
+                lifetimeStats.totalEarnings.toLocaleString("da-DK", {
+                  style: "currency",
+                  currency: "DKK",
+                })
+              ) : (
+                <Skeleton className="h-8 w-24" />
+              )}
             </div>
             <p className="text-muted-foreground text-xs">
               Total indtjening fra gennemførte behandlinger
@@ -120,7 +144,9 @@ export default function DashboardPage() {
             <CalendarCheck className="text-muted-foreground h-4 w-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.todayBookings}</div>
+            <div className="text-2xl font-bold">
+              {recentStats.todayBookings}
+            </div>
             <p className="text-muted-foreground text-xs">
               Aftaler planlagt i dag
             </p>
@@ -134,7 +160,13 @@ export default function DashboardPage() {
             <Scissors className="text-muted-foreground h-4 w-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalCuts}</div>
+            <div className="text-2xl font-bold">
+              {lifetimeStats ? (
+                lifetimeStats.totalCuts
+              ) : (
+                <Skeleton className="h-8 w-16" />
+              )}
+            </div>
             <p className="text-muted-foreground text-xs">
               Gennemførte behandlinger totalt
             </p>
@@ -152,7 +184,7 @@ export default function DashboardPage() {
               config={monthChartConfig}
               className="aspect-auto h-[350px] w-full"
             >
-              <AreaChart data={stats.monthlyData}>
+              <AreaChart data={recentStats.monthlyData}>
                 <defs>
                   <linearGradient id="fillEarnings" x1="0" y1="0" x2="0" y2="1">
                     <stop
@@ -239,14 +271,14 @@ export default function DashboardPage() {
 
         <Card className="col-span-3">
           <CardHeader>
-            <CardTitle>Frisør Performance</CardTitle>
+            <CardTitle>Frisør Performance (Sidste 6 mdr)</CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer
               config={radarChartConfig}
               className="mx-auto aspect-square max-h-[350px]"
             >
-              <RadarChart data={stats.hairdresserData}>
+              <RadarChart data={recentStats.hairdresserData}>
                 <ChartTooltip
                   cursor={false}
                   content={<ChartTooltipContent />}

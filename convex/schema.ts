@@ -120,5 +120,16 @@ export default defineSchema({
     .index("by_hairdresser_and_start", ["hairdresserId", "startsAt"])
     // Add index to find appointments by customer if needed, but not strictly required by task yet
     .index("by_customer", ["customerId"])
-    .index("by_booking_code", ["bookingCode"]),
+    .index("by_booking_code", ["bookingCode"])
+    // Composite index for efficient status-based filtering (dashboard queries)
+    .index("by_salon_status_and_start", ["salonId", "status", "startsAt"]),
+
+  // Pre-computed statistics for instant dashboard loads
+  // Updated incrementally by appointment mutations
+  salonStats: defineTable({
+    salonId: v.id("salons"),
+    totalEarnings: v.number(), // Sum of all completed appointment earnings
+    totalCuts: v.number(), // Count of all completed appointments
+    lastUpdated: v.number(), // Timestamp of last update
+  }).index("by_salon", ["salonId"]),
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 
 import { Doc, Id } from "@/convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
@@ -28,7 +28,8 @@ interface TimelineViewProps {
   salonOpeningHours?: Doc<"salons">["openingHours"];
 }
 
-export function TimelineView({
+// Memoize the component to prevent unnecessary re-renders
+export const TimelineView = memo(function TimelineView({
   date,
   hairdressers,
   appointments,
@@ -68,18 +69,21 @@ export function TimelineView({
     return Array.from({ length: endHour - startHour }, (_, i) => startHour + i);
   }, [startHour, endHour]);
 
-  const getPositionStyle = (start: number, end: number) => {
-    const dayStart = new Date(date);
-    dayStart.setHours(startHour, 0, 0, 0);
-    const dayStartMs = dayStart.getTime();
+  const getPositionStyle = useMemo(
+    () => (start: number, end: number) => {
+      const dayStart = new Date(date);
+      dayStart.setHours(startHour, 0, 0, 0);
+      const dayStartMs = dayStart.getTime();
 
-    const top =
-      ((start - dayStartMs) / (1000 * 60 * 60 * (endHour - startHour))) * 100;
-    const height =
-      ((end - start) / (1000 * 60 * 60 * (endHour - startHour))) * 100;
+      const top =
+        ((start - dayStartMs) / (1000 * 60 * 60 * (endHour - startHour))) * 100;
+      const height =
+        ((end - start) / (1000 * 60 * 60 * (endHour - startHour))) * 100;
 
-    return { top: `${top}%`, height: `${height}%` };
-  };
+      return { top: `${top}%`, height: `${height}%` };
+    },
+    [date, startHour, endHour]
+  );
 
   return (
     <div className="bg-background flex h-full flex-col overflow-hidden rounded-md border">
@@ -193,4 +197,4 @@ export function TimelineView({
       </div>
     </div>
   );
-}
+});

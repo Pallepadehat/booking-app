@@ -26,6 +26,23 @@ export const createService = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthorized");
 
+    // Validate inputs
+    if (args.name.trim().length === 0) {
+      throw new Error("Service name cannot be empty");
+    }
+    if (args.durationMinutes <= 0) {
+      throw new Error("Duration must be positive (in minutes)");
+    }
+    if (args.durationMinutes > 480) {
+      throw new Error("Duration cannot exceed 8 hours (480 minutes)");
+    }
+    if (args.priceDkk < 0) {
+      throw new Error("Price cannot be negative");
+    }
+    if (args.priceDkk > 100000) {
+      throw new Error("Price seems unreasonably high");
+    }
+
     // Permission check
     const membership = await ctx.db
       .query("memberships")
@@ -37,13 +54,15 @@ export const createService = mutation({
       !membership ||
       (membership.role !== "owner" && membership.role !== "manager")
     ) {
-      throw new Error("Unauthorized");
+      throw new Error(
+        "Unauthorized: Only owners and managers can create services"
+      );
     }
 
     await ctx.db.insert("services", {
       salonId: args.salonId,
-      name: args.name,
-      description: args.description,
+      name: args.name.trim(),
+      description: args.description.trim(),
       durationMinutes: args.durationMinutes,
       priceDkk: args.priceDkk,
       active: true,
@@ -65,6 +84,23 @@ export const updateService = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthorized");
 
+    // Validate inputs
+    if (args.name.trim().length === 0) {
+      throw new Error("Service name cannot be empty");
+    }
+    if (args.durationMinutes <= 0) {
+      throw new Error("Duration must be positive (in minutes)");
+    }
+    if (args.durationMinutes > 480) {
+      throw new Error("Duration cannot exceed 8 hours (480 minutes)");
+    }
+    if (args.priceDkk < 0) {
+      throw new Error("Price cannot be negative");
+    }
+    if (args.priceDkk > 100000) {
+      throw new Error("Price seems unreasonably high");
+    }
+
     const service = await ctx.db.get(args.serviceId);
     if (!service) throw new Error("Service not found");
 
@@ -79,12 +115,14 @@ export const updateService = mutation({
       !membership ||
       (membership.role !== "owner" && membership.role !== "manager")
     ) {
-      throw new Error("Unauthorized");
+      throw new Error(
+        "Unauthorized: Only owners and managers can update services"
+      );
     }
 
     await ctx.db.patch(args.serviceId, {
-      name: args.name,
-      description: args.description,
+      name: args.name.trim(),
+      description: args.description.trim(),
       durationMinutes: args.durationMinutes,
       priceDkk: args.priceDkk,
       active: args.active,
@@ -92,7 +130,7 @@ export const updateService = mutation({
   },
 });
 
-// Delete Service (Hard delete if unused, or just soft delete? User said manage so let's stick to update active: false for now usually, but I'll add a delete mutation that does hard delete)
+// Delete Service
 export const deleteService = mutation({
   args: { serviceId: v.id("services") },
   handler: async (ctx, args) => {
@@ -113,7 +151,21 @@ export const deleteService = mutation({
       !membership ||
       (membership.role !== "owner" && membership.role !== "manager")
     ) {
-      throw new Error("Unauthorized");
+      throw new Error(
+        "Unauthorized: Only owners and managers can delete services"
+      );
+    }
+
+    // Safety check: prevent deletion if service has appointments
+    const hasAppointments = await ctx.db
+      .query("appointments")
+      .filter((q) => q.eq(q.field("serviceId"), args.serviceId))
+      .first();
+
+    if (hasAppointments) {
+      throw new Error(
+        "Cannot delete service with existing appointments. Deactivate it instead."
+      );
     }
 
     await ctx.db.delete(args.serviceId);
