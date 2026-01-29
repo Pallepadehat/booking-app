@@ -219,8 +219,12 @@ export const seedDashboardData = mutation({
 
     // 5. Generate Appointments - MASSIVE DATA! EVENLY distributed across 12 months
     const now = Date.now();
-    const TOTAL_APPTS = 20016; // ~20,000 appointments! Divisible by 12
-    const APPTS_PER_MONTH = TOTAL_APPTS / 12; // 1,668 per month
+    const TOTAL_APPTS = 6000; // 6,000 appointments (500 per month - ensures we complete all 12 months!)
+    const APPTS_PER_MONTH = TOTAL_APPTS / 12; // 500 per month
+
+    // Track stats to update in batch (avoids hitting 16k write limit)
+    let totalCompletedEarnings = 0;
+    let totalCompletedCuts = 0;
 
     // Generate month by month for even distribution
     for (let monthAgo = 11; monthAgo >= 0; monthAgo--) {
@@ -273,24 +277,28 @@ export const seedDashboardData = mutation({
           createdBy: "seed",
         });
 
-        // Update stats for completed appointments
+        // Track stats (don't update DB each time - batch it!)
         if (status === "completed") {
-          const stats = await ctx.db
-            .query("salonStats")
-            .withIndex("by_salon", (q) => q.eq("salonId", salonId))
-            .first();
-
-          if (stats) {
-            await ctx.db.patch(stats._id, {
-              totalEarnings: stats.totalEarnings + service.priceDkk,
-              totalCuts: stats.totalCuts + 1,
-              lastUpdated: now,
-            });
-          }
+          totalCompletedEarnings += service.priceDkk;
+          totalCompletedCuts += 1;
         }
       }
     }
 
-    return `Seeded ${TOTAL_APPTS} appointments evenly across 12 months (${APPTS_PER_MONTH} per month)!`;
+    // Update stats once at the end (single write instead of thousands!)
+    const stats = await ctx.db
+      .query("salonStats")
+      .withIndex("by_salon", (q) => q.eq("salonId", salonId))
+      .first();
+
+    if (stats) {
+      await ctx.db.patch(stats._id, {
+        totalEarnings: totalCompletedEarnings,
+        totalCuts: totalCompletedCuts,
+        lastUpdated: now,
+      });
+    }
+
+    return `Seeded ${TOTAL_APPTS.toLocaleString()} appointments evenly across 12 months (${APPTS_PER_MONTH.toLocaleString()} per month)! Total: ${totalCompletedCuts.toLocaleString()} cuts, ${totalCompletedEarnings.toLocaleString("da-DK", { style: "currency", currency: "DKK" })}`;
   },
 });
